@@ -1,0 +1,460 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     15602,        452]
+NotebookOptionsPosition[     14086,        417]
+NotebookOutlinePosition[     14441,        433]
+CellTagsIndexPosition[     14398,        430]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Public", " ", "notebook", " ", "to", " ", "cloud"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"notebookFn", "=", 
+     RowBox[{
+      RowBox[{"FileNameSplit", "[", 
+       RowBox[{"NotebookFileName", "[", "]"}], "]"}], "[", 
+      RowBox[{"[", 
+       RowBox[{"-", "1"}], "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"parentDir", "=", 
+     RowBox[{
+      RowBox[{"FileNameSplit", "[", 
+       RowBox[{"NotebookFileName", "[", "]"}], "]"}], "[", 
+      RowBox[{"[", 
+       RowBox[{"-", "2"}], "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"cloudFn", "=", 
+     RowBox[{
+     "parentDir", "~", "StringJoin", "~", "\"\</\>\"", "~", "StringJoin", "~",
+       "notebookFn"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"result", "=", 
+     RowBox[{"CloudDeploy", "[", 
+      RowBox[{
+       RowBox[{"SelectedNotebook", "[", "]"}], ",", 
+       RowBox[{"CloudObject", "[", "cloudFn", "]"}], ",", 
+       RowBox[{"Permissions", "\[Rule]", "\"\<Public\>\""}], ",", 
+       RowBox[{"SourceLink", "\[Rule]", "None"}]}], "]"}]}], ";"}], "\n", 
+   RowBox[{
+    RowBox[{"Print", "[", 
+     RowBox[{"\"\<Uploading to \>\"", ",", "cloudFn"}], "]"}], ";"}], 
+   "\[IndentingNewLine]", "result"}]}]], "Input",
+ CellChangeTimes->{{3.74143430110935*^9, 3.741434349557695*^9}, {
+   3.741434409006235*^9, 3.741434430229126*^9}, {3.741434487147357*^9, 
+   3.7414345025619497`*^9}, {3.741434772995367*^9, 3.741434774519691*^9}, {
+   3.741434811225583*^9, 3.741434812432209*^9}, 
+   3.741434864856988*^9},ExpressionUUID->"88713f2e-e365-41d7-9738-\
+848ed8253b89"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Uploading to \"\>", 
+   "\[InvisibleSpace]", "\<\"newton/linear-jacobians-and-hessians.nb\"\>"}],
+  SequenceForm["Uploading to ", "newton/linear-jacobians-and-hessians.nb"],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.741434506253028*^9, 3.741434813759857*^9},
+ CellLabel->
+  "During evaluation of \
+In[235]:=",ExpressionUUID->"fec82ac4-354e-4862-be04-e2d2e5ec188d"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"CloudObject", "[", 
+   TemplateBox[{
+    "\"https://www.wolframcloud.com/objects/yaroslavvb/newton/linear-\
+jacobians-and-hessians.nb\"",
+     "https://www.wolframcloud.com/objects/yaroslavvb/newton/linear-jacobians-\
+and-hessians.nb"},
+    "HyperlinkURL"], "]"}],
+  CloudObject[
+  "https://www.wolframcloud.com/objects/yaroslavvb/newton/linear-jacobians-\
+and-hessians.nb"],
+  SelectWithContents->True]], "Output",
+ CellChangeTimes->{3.741434813771759*^9},
+ CellLabel->
+  "Out[240]=",ExpressionUUID->"0ac0488c-3626-4d51-bd84-430143f63a48"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Linear Jacobians and Hessians", "Title",
+ CellChangeTimes->{{3.741433533093522*^9, 
+  3.741433554378862*^9}},ExpressionUUID->"c1c636a2-14e1-4389-9719-\
+cbf6ebddc9e5"],
+
+Cell[CellGroupData[{
+
+Cell["Util", "Section",
+ CellChangeTimes->{{3.741433597855296*^9, 
+  3.741433620288856*^9}},ExpressionUUID->"d0d32afc-3f1f-4db4-9ece-\
+621916eeff9c"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "Change", " ", "TensorProduct", " ", "to", " ", "act", " ", "like", " ", 
+    "Kronecker", " ", "product"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"Unprotect", "[", "TensorProduct", "]"}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"TensorProduct", "=", "KroneckerProduct"}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"Protect", "[", "TensorProduct", "]"}], ";"}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"On", "[", "Assert", "]"}], ";"}], "\[IndentingNewLine]", 
+   "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"column", " ", "vectorize"}], ",", " ", 
+     RowBox[{"following", " ", "Magnus"}], ",", " ", "1999"}], " ", "*)"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"vec", "[", "W_", "]"}], ":=", 
+     RowBox[{"Transpose", "@", 
+      RowBox[{"{", 
+       RowBox[{"Flatten", "@", 
+        RowBox[{"Transpose", "[", "W", "]"}]}], "}"}]}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"unvec", "[", 
+      RowBox[{"Wf_", ",", " ", "rows_"}], "]"}], ":=", 
+     RowBox[{"Transpose", "[", 
+      RowBox[{"Flatten", "/@", 
+       RowBox[{"Partition", "[", 
+        RowBox[{"Wf", ",", "rows"}], "]"}]}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"toscalar", "[", "v_", "]"}], ":=", 
+     RowBox[{"Block", "[", 
+      RowBox[{
+       RowBox[{"{", "t", "}"}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"t", "=", 
+         RowBox[{"Flatten", "@", "v"}]}], ";", "\[IndentingNewLine]", 
+        RowBox[{"Assert", "[", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"Length", "[", "t", "]"}], "\[Equal]", "1"}], ",", " ", 
+          "\"\<scalar assert\>\""}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"First", "@", "t"}]}]}], "\[IndentingNewLine]", "]"}]}], 
+    ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"v2c", "[", "c_", "]"}], ":=", 
+    RowBox[{"Transpose", "[", 
+     RowBox[{"{", "c", "}"}], "]"}]}], " ", 
+   RowBox[{"(*", " ", 
+    RowBox[{"turns", " ", "vector", " ", "to", " ", "column", " ", "matrix"}],
+     " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"v2r", "[", "c_", "]"}], ":=", 
+    RowBox[{"{", "c", "}"}]}], " ", 
+   RowBox[{"(*", " ", 
+    RowBox[{"turns", " ", "vector", " ", "to", " ", "row", " ", "matrix"}], 
+    " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"c2v", "[", "c_", "]"}], ":=", 
+    RowBox[{"Flatten", "[", "c", "]"}]}], " ", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+    "turns", " ", "column", " ", "matrix", " ", "into", " ", "vector"}], " ", 
+    "*)"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{"approximate", " ", "equality", " ", "testing"}], " ", "*)"}], 
+   "\n", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"DotEqual", "[", 
+      RowBox[{"a_", ",", "b_"}], "]"}], ":=", 
+     RowBox[{
+      RowBox[{"Norm", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"Flatten", "[", 
+          RowBox[{"{", "a", "}"}], "]"}], "-", 
+         RowBox[{"Flatten", "[", 
+          RowBox[{"{", "b", "}"}], "]"}]}], ",", "\[Infinity]"}], "]"}], "<", 
+      "1*^-9"}]}], ";"}]}]}]], "Input",
+ CellChangeTimes->{{3.741433635319787*^9, 3.74143363552803*^9}, {
+  3.741434964890194*^9, 3.741434975899349*^9}},
+ CellLabel->
+  "In[253]:=",ExpressionUUID->"d7e6b6eb-d941-4397-8212-6eb1f2a68b88"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Matrix Derivative", "Section",
+ CellChangeTimes->{{3.74143485436311*^9, 
+  3.7414348576829033`*^9}},ExpressionUUID->"ea2c93cd-08cf-4dfd-884d-\
+ac2e6c79d02b"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", 
+  RowBox[{
+  "W", ",", "f", ",", "fs", ",", "B", ",", "W", ",", "A", ",", "Y", ",", 
+   "dvec"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"fs", "=", 
+   RowBox[{"{", 
+    RowBox[{"2", ",", "2", ",", "2", ",", "2"}], "}"}]}], " ", 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"f", "[", "k_", "]"}], ":=", 
+    RowBox[{"fs", "[", 
+     RowBox[{"[", 
+      RowBox[{"k", "+", "2"}], "]"}], "]"}]}], ";", " ", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"f", "[", 
+      RowBox[{"-", "1"}], "]"}], " ", "is", " ", "the", " ", "first", " ", 
+     "entry"}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{"dsize", "=", 
+    RowBox[{"f", "[", 
+     RowBox[{"-", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "number", " ", "of", " ", "layers", " ", "aka", " ", "number", " ", "of", 
+    " ", "matmuls"}], " ", "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"n", "=", 
+   RowBox[{
+    RowBox[{"Length", "[", "fs", "]"}], "-", "2"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Ws", "=", 
+   RowBox[{"Array", "[", 
+    RowBox[{"W", ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"f", "[", "1", "]"}], ",", " ", 
+       RowBox[{"f", "[", "0", "]"}]}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"B", "=", 
+   RowBox[{"RandomReal", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"f", "[", "1", "]"}], ",", 
+       RowBox[{"f", "[", "2", "]"}]}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"A", "=", 
+   RowBox[{"RandomReal", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"f", "[", "0", "]"}], ",", 
+       RowBox[{"f", "[", 
+        RowBox[{"-", "1"}], "]"}]}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"Y", "=", 
+    RowBox[{
+     RowBox[{"B", "\[Transpose]"}], ".", "Ws", ".", "A"}]}], ";"}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"dvecW", "[", "y_", "]"}], ":=", 
+    RowBox[{"c2v", "@", 
+     RowBox[{"vec", "@", 
+      RowBox[{"D", "[", 
+       RowBox[{"y", ",", 
+        RowBox[{"{", "Ws", "}"}]}], "]"}]}]}]}], ";"}], " ", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "d", " ", "of", " ", "scalar", " ", "with", " ", "respect", " ", "to", " ", 
+    RowBox[{"dvecW", "'"}]}], " ", "*)"}], " "}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vecY", "=", 
+   RowBox[{"Flatten", "[", 
+    RowBox[{"vec", "@", "Y"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"dvecW", "/@", "vecY"}], "//", 
+  "MatrixForm"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"A", "\[TensorProduct]", "B"}], ")"}], "\[Transpose]"}], "//", 
+  "MatrixForm"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"(", 
+   RowBox[{"dvecW", "/@", "vecY"}], ")"}], "==", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"A", "\[TensorProduct]", "B"}], ")"}], 
+   "\[Transpose]"}]}]}], "Input",
+ CellChangeTimes->{{3.741434885236704*^9, 3.7414348983144503`*^9}, {
+  3.741435014324172*^9, 3.741435020171548*^9}, {3.741435313885811*^9, 
+  3.741435314044696*^9}},
+ CellLabel->
+  "In[267]:=",ExpressionUUID->"32e396dc-e5f9-402b-856d-5cf525db549c"],
+
+Cell[BoxData[
+ TagBox[
+  RowBox[{"(", "\[NoBreak]", GridBox[{
+     {
+      RowBox[{"-", "0.10102268585683802`"}], 
+      RowBox[{"-", "0.26715821769148806`"}], 
+      RowBox[{"-", "0.03443379196369112`"}], 
+      RowBox[{"-", "0.0910614325025543`"}]},
+     {
+      RowBox[{"-", "0.37029041142712704`"}], 
+      RowBox[{"-", "0.2911502796110186`"}], 
+      RowBox[{"-", "0.12621425460119293`"}], 
+      RowBox[{"-", "0.0992391765598431`"}]},
+     {"0.12902173093329602`", "0.3412027247865628`", 
+      RowBox[{"-", "0.05117988176787285`"}], 
+      RowBox[{"-", "0.1353470844572728`"}]},
+     {"0.4729186263967901`", "0.3718443309887911`", 
+      RowBox[{"-", "0.18759568027595233`"}], 
+      RowBox[{"-", "0.14750188792536872`"}]}
+    },
+    GridBoxAlignment->{
+     "Columns" -> {{Center}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+      "RowsIndexed" -> {}},
+    GridBoxSpacings->{"Columns" -> {
+        Offset[0.27999999999999997`], {
+         Offset[0.7]}, 
+        Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+        Offset[0.2], {
+         Offset[0.4]}, 
+        Offset[0.2]}, "RowsIndexed" -> {}}], "\[NoBreak]", ")"}],
+  Function[BoxForm`e$, 
+   MatrixForm[BoxForm`e$]]]], "Output",
+ CellChangeTimes->{3.741434898731201*^9, 3.741435314448771*^9},
+ CellLabel->
+  "Out[277]//MatrixForm=",ExpressionUUID->"6d234752-ea3f-4a1d-b03d-\
+566707c34980"],
+
+Cell[BoxData[
+ TagBox[
+  RowBox[{"(", "\[NoBreak]", GridBox[{
+     {
+      RowBox[{"-", "0.10102268585683802`"}], 
+      RowBox[{"-", "0.26715821769148806`"}], 
+      RowBox[{"-", "0.03443379196369112`"}], 
+      RowBox[{"-", "0.0910614325025543`"}]},
+     {
+      RowBox[{"-", "0.37029041142712704`"}], 
+      RowBox[{"-", "0.2911502796110186`"}], 
+      RowBox[{"-", "0.12621425460119293`"}], 
+      RowBox[{"-", "0.0992391765598431`"}]},
+     {"0.12902173093329602`", "0.3412027247865628`", 
+      RowBox[{"-", "0.05117988176787285`"}], 
+      RowBox[{"-", "0.1353470844572728`"}]},
+     {"0.4729186263967901`", "0.3718443309887911`", 
+      RowBox[{"-", "0.18759568027595233`"}], 
+      RowBox[{"-", "0.14750188792536872`"}]}
+    },
+    GridBoxAlignment->{
+     "Columns" -> {{Center}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+      "RowsIndexed" -> {}},
+    GridBoxSpacings->{"Columns" -> {
+        Offset[0.27999999999999997`], {
+         Offset[0.7]}, 
+        Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+        Offset[0.2], {
+         Offset[0.4]}, 
+        Offset[0.2]}, "RowsIndexed" -> {}}], "\[NoBreak]", ")"}],
+  Function[BoxForm`e$, 
+   MatrixForm[BoxForm`e$]]]], "Output",
+ CellChangeTimes->{3.741434898731201*^9, 3.741435314465378*^9},
+ CellLabel->
+  "Out[278]//MatrixForm=",ExpressionUUID->"a4334421-ee85-47ee-8ddb-\
+a78de867fe31"],
+
+Cell[BoxData["True"], "Output",
+ CellChangeTimes->{3.741434898731201*^9, 3.741435314474546*^9},
+ CellLabel->
+  "Out[279]=",ExpressionUUID->"cb02da9f-ab53-48cd-adda-130fa8959d6a"]
+}, Open  ]],
+
+Cell["Jacobian of Y with respect to W is (A\[TensorProduct]B)\[Transpose]", \
+"Text",
+ CellChangeTimes->{{3.741437419960126*^9, 
+  3.7414374346571198`*^9}},ExpressionUUID->"95cd2968-7967-40d3-a17d-\
+179221cd81bc"]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{808, 755},
+WindowMargins->{{316, Automatic}, {Automatic, 43}},
+FrontEndVersion->"11.3 for Mac OS X x86 (32-bit, 64-bit Kernel) (March 5, \
+2018)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 1697, 42, 178, "Input",ExpressionUUID->"88713f2e-e365-41d7-9738-848ed8253b89"],
+Cell[2280, 66, 422, 9, 24, "Print",ExpressionUUID->"fec82ac4-354e-4862-be04-e2d2e5ec188d"],
+Cell[2705, 77, 585, 15, 37, "Output",ExpressionUUID->"0ac0488c-3626-4d51-bd84-430143f63a48"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3327, 97, 172, 3, 98, "Title",ExpressionUUID->"c1c636a2-14e1-4389-9719-cbf6ebddc9e5"],
+Cell[CellGroupData[{
+Cell[3524, 104, 149, 3, 67, "Section",ExpressionUUID->"d0d32afc-3f1f-4db4-9ece-621916eeff9c"],
+Cell[3676, 109, 3519, 96, 451, "Input",ExpressionUUID->"d7e6b6eb-d941-4397-8212-6eb1f2a68b88"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7232, 210, 163, 3, 67, "Section",ExpressionUUID->"ea2c93cd-08cf-4dfd-884d-ac2e6c79d02b"],
+Cell[CellGroupData[{
+Cell[7420, 217, 3461, 110, 346, "Input",ExpressionUUID->"32e396dc-e5f9-402b-856d-5cf525db549c"],
+Cell[10884, 329, 1381, 35, 94, "Output",ExpressionUUID->"6d234752-ea3f-4a1d-b03d-566707c34980"],
+Cell[12268, 366, 1381, 35, 94, "Output",ExpressionUUID->"a4334421-ee85-47ee-8ddb-a78de867fe31"],
+Cell[13652, 403, 178, 3, 34, "Output",ExpressionUUID->"cb02da9f-ab53-48cd-adda-130fa8959d6a"]
+}, Open  ]],
+Cell[13845, 409, 213, 4, 35, "Text",ExpressionUUID->"95cd2968-7967-40d3-a17d-179221cd81bc"]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
