@@ -613,47 +613,48 @@ def t(x):
   return tf.transpose(x)
 
   
-# Time tracking functions
-global_time_list = []
-global_last_time = 0
-def reset_time():
-  global global_time_list, global_last_time
-  global_time_list = []
-  global_last_time = time.perf_counter()
+# # Time tracking functions
+# global_time_list = []
+# global_last_time = 0
+# def reset_time():
+#   global global_time_list, global_last_time
+#   global_time_list = []
+#   global_last_time = time.perf_counter()
   
-def record_time():
-  global global_last_time, global_time_list
-  new_time = time.perf_counter()
-  global_time_list.append(new_time - global_last_time)
-  global_last_time = time.perf_counter()
-  #print("step: %.2f"%(global_time_list[-1]*1000))
+# def record_time():
+#   global global_last_time, global_time_list
+#   new_time = time.perf_counter()
+#   global_time_list.append(new_time - global_last_time)
+#   global_last_time = time.perf_counter()
+#   #print("step: %.2f"%(global_time_list[-1]*1000))
 
-def last_time():
-  """Returns last interval records in millis."""
-  global global_last_time, global_time_list
-  if global_time_list:
-    return 1000*global_time_list[-1]
-  else:
-    return 0
+# def last_time():
+#   """Returns last interval records in millis."""
+#   global global_last_time, global_time_list
+#   if global_time_list:
+#     return 1000*global_time_list[-1]
+#   else:
+#     return 0
 
-def summarize_time(time_list=None):
-  if time_list is None:
-    time_list = global_time_list
+# def summarize_time(time_list=None):
+#   if time_list is None:
+#     time_list = global_time_list
 
-  # delete first large interval if exists
-  if time_list and time_list[0]>3600*10:
-    del time_list[0]
+#   # delete first large interval if exists
+#   if time_list and time_list[0]>3600*10:
+#     del time_list[0]
     
-  time_list = 1000*np.array(time_list)  # get seconds, convert to ms
-  if len(time_list)>0:
-    min = np.min(time_list)
-    median = np.median(time_list)
-    formatted = ["%.2f"%(d,) for d in time_list[:10]]
-    print("Times: min: %.2f, median: %.2f, mean: %.2f"%(min, median,
-                                                        np.mean(time_list)))
-  else:
-    print("Times: <empty>")
+#   time_list = 1000*np.array(time_list)  # get seconds, convert to ms
+#   if len(time_list)>0:
+#     min = np.min(time_list)
+#     median = np.median(time_list)
+#     formatted = ["%.2f"%(d,) for d in time_list[:10]]
+#     print("Times: min: %.2f, median: %.2f, mean: %.2f"%(min, median,
+#                                                         np.mean(time_list)))
+#   else:
+#     print("Times: <empty>")
     
+
 def summarize_graph(g=None):
   if not g:
     g = tf.get_default_graph()
@@ -737,13 +738,43 @@ def L2(t):
   return tf.reduce_sum(tf.square(t))
 
 
+def reset_timeit():
+  global global_timeit_dict, global_last_time
+  global_timeit_dict = OrderedDict()
+
+def summarize_timeit():
+  for tag, time_list in global_timeit_dict.items():
+    print(tag)
+    summarize_time(time_list)
+    
+def summarize_time(time_list=None):
+  global global_timeit_dict
+  if time_list is None:
+    time_list = global_time_list
+
+  # delete first large interval if exists
+  if time_list and time_list[0]>3600*10:
+    del time_list[0]
+    
+  time_list = np.array(time_list)
+  if len(time_list)>0:
+    min = np.min(time_list)
+    median = np.median(time_list)
+    formatted = ["%.2f"%(d,) for d in time_list[:10]]
+    print("Times: min: %.2f, median: %.2f, mean: %.2f"%(min, median,
+                                                        np.mean(time_list)))
+  else:
+    print("Times: <empty>")
+
+
 global_timeit_dict = OrderedDict()
 class timeit:
   """Decorator to measure length of time spent in the block in millis and log
   it to TensorBoard."""
   
-  def __init__(self, tag=""):
+  def __init__(self, tag="", verbose=False):
     self.tag = tag
+    self.verbose = verbose
     
   def __enter__(self):
     self.start = time.perf_counter()
@@ -752,6 +783,8 @@ class timeit:
   def __exit__(self, *args):
     self.end = time.perf_counter()
     interval_ms = 1000*(self.end - self.start)
+    if self.verbose:
+      print(self.tag, interval_ms)
     global_timeit_dict.setdefault(self.tag, []).append(interval_ms)
     logger = u.get_last_logger(skip_existence_check=True)
     if logger:
@@ -768,9 +801,6 @@ def record(tag, stat):
     global_record_dict.setdefault(tag, []).append(stat)
 
 
-def timeit_summarize():
-  global global_timeit_dict
-  pass
 
 # graph traversal
 # computation flows from parents to children
