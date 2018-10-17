@@ -95,8 +95,9 @@ def main():
   for i in range(iters):
     torch.cuda.synchronize()
     with u.timeit('Pytorch GPU'):
-      result = torch.trtrs(b, A)
-      torch.cuda.synchronize()
+      (result, dummy) = torch.trtrs(b, A)
+      print(result[0, 0])
+      #      torch.cuda.synchronize()
     del result
 
   ############################################################
@@ -119,6 +120,7 @@ def main():
     b+=1  # prevent caching
     with u.timeit('TF GPU'):
       result.assign(tf.linalg.triangular_solve(A, b))
+      print(result[0, 0])
 
   ############################################################
   # Tensorflow CPU
@@ -131,9 +133,10 @@ def main():
   b = b.cpu()
 
   # prewarm
-  result =  tf.contrib.eager.Variable(tf.zeros((n, 1)).cpu())
+  with tf.device('/cpu:0'):
+    result =  tf.contrib.eager.Variable(tf.zeros((n, 1)))
   result.assign(tf.linalg.triangular_solve(A, b))
-  assert 'gpu' in result.device.lower()
+  assert 'cpu' in result.device.lower()
   for i in range(iters):
     b+=1  # prevent caching
     with u.timeit('TF CPU'):
