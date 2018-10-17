@@ -2,21 +2,18 @@
 """Benchmark triangular solve in numpy, Pytorch and TensorFlow.
 
 On p3.2xlarge
-Benchmarking n=8000
+
+Benchmarking n=10000
 numpy
-Times: min: 127.86, median: 128.12, mean: 128.31
-
-tensorflow gpu
-Times: min: 1.20, median: 1.20, mean: 1.20
-
-tensorflow cpu
-Times: min: 32.77, median: 32.88, mean: 32.91
-
-pytorch cpu
-Times: min: 162.65, median: 162.65, mean: 162.65
-
-pytorch gpu
-Times: min: 0.04, median: 0.05, mean: 0.05
+Times: min: 202.54, median: 203.09, mean: 203.31
+Pytorch GPU
+Times: min: 6.46, median: 6.49, mean: 6.52
+Pytorch CPU
+Times: min: 254.73, median: 260.98, mean: 261.95
+TF GPU
+Times: min: 1.53, median: 1.60, mean: 1.60
+TF CPU
+Times: min: 52.40, median: 54.21, mean: 53.87
 
 """
 
@@ -27,12 +24,11 @@ tf.enable_eager_execution()
 import torch
 import util as u
 
-if __name__ == '__main__':
-
+def main():
   u.reset_timeit()
 
-  iters = 3
-  n = 8000
+  iters = 11
+  n = 10000
 
   print(f"Benchmarking n={n}")
 
@@ -50,7 +46,7 @@ if __name__ == '__main__':
       scipy.linalg.solve_triangular(A, b)
 
   ############################################################
-  # PyTorch
+  # PyTorch GPU
   ############################################################
   A = torch.randn(n, n)
   A = A @ A.t()+torch.diag(torch.ones(n))
@@ -60,30 +56,91 @@ if __name__ == '__main__':
   # prewarm
   torch.trtrs(b, A)
   for i in range(iters):
-    with u.timeit('pytorch'):
+    torch.cuda.synchronize()
+    with u.timeit('Pytorch GPU'):
       result = torch.trtrs(b, A)
+      torch.cuda.synchronize()
     del result
 
   ############################################################
-  # Tensorflow
+  # PyTorch CPU
   ############################################################
-  A=tf.random_normal((n,n))
-  b=tf.random_normal((n, 1))
+  A = torch.randn(n, n)
+  A = A @ A.t()+torch.diag(torch.ones(n))
+  A = torch.potrf(A)
+  b = torch.randn(n, 1)
+
+  # prewarm
+  (result, A_clone) = torch.trtrs(b, A)
+  assert result.device.type == 'cpu'
+
+  for i in range(iters):
+    torch.cuda.synchronize()
+    with u.timeit('Pytorch CPU'):
+      result = torch.trtrs(b, A)
+      torch.cuda.synchronize()
+    del result
+
+  ############################################################
+  # PyTorch GPU
+  ############################################################
+  A = torch.randn(n, n)
+  A = A @ A.t()+torch.diag(torch.ones(n))
+  A = torch.potrf(A).cuda()
+  b = torch.randn(n, 1).cuda()
+
+  # prewarm
+  (result, A_clone) = torch.trtrs(b, A)
+  assert result.device.type == 'cuda'
+  for i in range(iters):
+    torch.cuda.synchronize()
+    with u.timeit('Pytorch GPU'):
+      result = torch.trtrs(b, A)
+      torch.cuda.synchronize()
+    del result
+
+  ############################################################
+  # Tensorflow GPU
+  ############################################################
+  A=tf.random_normal((n,n)).gpu()
+  b=tf.random_normal((n, 1)).gpu()
   A=A@tf.transpose(A)+tf.diag(tf.ones((n,))) # bug, diag is needed, or Cholesky fails
   A=tf.cholesky(A)
   # bug, Should be able to do constant conversion, but fails with
   # Internal: failed to query device pointer for context: CUDA_ERROR_INVALID_VALUE
   #  A = tf.constant(A).gpu()
   #  b = tf.constant(b).gpu()
-  #  assert 'gpu' in A.device.lower()
 
   # prewarm
   result =  tf.contrib.eager.Variable(tf.zeros((n, 1)))
   result.assign(tf.linalg.triangular_solve(A, b))
+  assert 'gpu' in result.device.lower()
   for i in range(iters):
     b+=1  # prevent caching
-    with u.timeit('tensorflow'):
+    with u.timeit('TF GPU'):
       result.assign(tf.linalg.triangular_solve(A, b))
-    print(result[0,0])
+
+  ############################################################
+  # Tensorflow CPU
+  ############################################################
+  A=tf.random_normal((n,n)).cpu()
+  b=tf.random_normal((n, 1)).cpu()
+  A=A@tf.transpose(A)+tf.diag(tf.ones((n,))) # bug, diag is needed, or Cholesky fails
+  A=tf.cholesky(A)
+  A = A.cpu()
+  b = b.cpu()
+
+  # prewarm
+  result =  tf.contrib.eager.Variable(tf.zeros((n, 1)).cpu())
+  result.assign(tf.linalg.triangular_solve(A, b))
+  assert 'gpu' in result.device.lower()
+  for i in range(iters):
+    b+=1  # prevent caching
+    with u.timeit('TF CPU'):
+      result.assign(tf.linalg.triangular_solve(A, b))
 
   u.summarize_timeit()
+
+
+if __name__ == '__main__':
+  main()
