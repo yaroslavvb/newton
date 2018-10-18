@@ -1,20 +1,19 @@
 #!/usr/bin/env/python
 """Benchmark triangular solve in numpy, Pytorch and TensorFlow.
 
-On p3.2xlarge
+On p3.2xlarge, DLAMI v15
 
 Benchmarking n=10000
 numpy
-Times: min: 202.54, median: 203.09, mean: 203.31
+Times: min: 203.06, median: 203.48, mean: 204.37
 Pytorch GPU
-Times: min: 6.46, median: 6.49, mean: 6.52
+Times: min: 6.47, median: 6.53, mean: 6.64
 Pytorch CPU
-Times: min: 254.73, median: 260.98, mean: 261.95
+Times: min: 254.77, median: 263.34, mean: 268.56
 TF GPU
-Times: min: 1.53, median: 1.60, mean: 1.60
+Times: min: 11.65, median: 11.70, mean: 11.69
 TF CPU
-Times: min: 52.40, median: 54.21, mean: 53.87
-
+Times: min: 62.13, median: 63.75, mean: 63.86
 """
 
 import scipy
