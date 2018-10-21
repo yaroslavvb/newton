@@ -25,7 +25,7 @@ def main():
   torch.manual_seed(args.seed)
 
 
-  logger = u.TensorboardLogger("lenet1")
+  logger = u.TensorboardLogger("psgd-lenet")
   batch_size = 64
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
   train_loader = torch.utils.data.DataLoader(
