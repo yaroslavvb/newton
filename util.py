@@ -3,6 +3,8 @@ import socket
 import contextlib
 import inspect
 import inspect
+import subprocess
+
 import networkx as nx
 import numpy as np
 import os
@@ -13,6 +15,8 @@ import traceback
 from tensorflow.contrib import graph_editor as ge
 from collections import OrderedDict
 from collections import defaultdict
+
+from tensorboardX import SummaryWriter
 
 import gzip
 import os
@@ -1315,8 +1319,15 @@ class BufferedWriter:
 
 
 def ossystem(line):
+  """Like os.system, but returns command output."""
+  
   print(line)
-  os.system(line)
+  #  os.system(line)
+  proc = subprocess.Popen(line, stdout=subprocess.PIPE,
+                          shell=True)
+  stdout, stderr = proc.communicate()
+  stdout = stdout.decode('ascii')
+  return stdout
 
 
 def setup_experiment_run_directory(run, safe_mode=True):
@@ -1357,42 +1368,61 @@ def get_last_logger(skip_existence_check=False):
 
 class TensorboardLogger:
   """Helper class to log to single tensorboard writer from multiple places.
-   logger = u.TensorboardLogger("mnist7")
+   logger = u.TensorboardLogger("mnist7") # or
    logger = u.get_last_logger()  # gets last logger created
    logger('svd_time', 5)  # records "svd_time" stat at 5
-   logger.next_step()     # advances step counter
    logger.set_step(5)     # sets step counter to 5
   """
 
-  def __init__(self, run, step=0):
-    # TODO: do nothing for default run
+  def __init__(self, run_name, step=0):
+    """Creates runs/run_name, deduping to runs/run_name.01, runs/run_name.02, etc"""
 
     global global_last_logger
     assert global_last_logger is None
-    self.run = run
-    #    sess = tf.get_default_session()
+    self.run_name = run_name
 
-    self.summary_writer = tf.summary.FileWriter(GLOBAL_RUNS_DIRECTORY + '/' + run,
-                                                graph=tf.get_default_graph())
+    logdir_root = 'runs'
+    ossystem(f'mkdir -p {logdir_root}')
+    find_command = f'find {logdir_root} -maxdepth 1 -type d'
+    stdout = ossystem(find_command)
+    logdir = f"{logdir_root}/{run_name}"
+
+    counter = 0
+    while logdir in stdout:
+      counter += 1
+      new_logdir = f'{logdir_root}/{run_name}.{counter:02d}'
+      logdir = new_logdir
+    ossystem(f'mkdir -p {logdir}')
+    print(f"Logging to {logdir}")
+
+    self.logdir = logdir
+    self.writer = SummaryWriter(self.logdir)
     self.step = step
-    self.summary = tf.Summary()
     global_last_logger = self
     self.last_timestamp = time.perf_counter()
+    #    self('first', time.time())  # for benchmarking purposes
+
+  def log(self, tag, value):
+    self.writer.add_scalar(tag=tag, scalar_value=float(value), global_step=self.step)
 
   def __call__(self, *args):
+    """Helper method to log multiple events at once, logger('tag1', val1, 'tag2', val2)"""
+
     assert len(args) % 2 == 0
     for (tag, value) in chunks(args, 2):
-      self.summary.value.add(tag=tag, simple_value=float(value))
+      self.log(tag, value)
 
-  def next_step(self):
-    new_timestamp = time.perf_counter()
-    interval_ms = 1000 * (new_timestamp - self.last_timestamp)
-    self.summary.value.add(tag='time/step',
-                           simple_value=interval_ms)
-    self.last_timestamp = new_timestamp
-    self.summary_writer.add_summary(self.summary, self.step)
-    self.step += 1
-    self.summary = tf.Summary()
+  def set_step(self, step):
+    self.step = step
+
+  def close(self):
+    #   File "/home/ubuntu/anaconda3/envs/tensorflow_p36/lib/python3.6/site-packages/tensorboardX/writer.py", line 376, in export_scalars_to_json
+    # NameError: name 'open' is not defined
+    # self.writer.export_scalars_to_json(self.output_dir+'/scalars.json')
+    self.writer.close()
+
+  def __del__(self):
+    self.close()
 
 
 def as_int32(v):
