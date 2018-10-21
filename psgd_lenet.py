@@ -49,16 +49,16 @@ def main():
   Ws = [W1, W2, W3, W4, W5]
   W=[None, W1, W2, W3, W4, W5]
 
-  for i in range(1, len(Ws)):
-    Ws[i] = Ws[i].to(device)
+  #  for i in range(1, len(Ws)):
+  #    Ws[i] = Ws[i].to(device)
 
   def LeNet5(x):
     x = F.conv2d(x, W1[:-1].view(6, 1, 5, 5), bias=W1[-1])
-    x = torch.tanh(F.max_pool2d(x, 2))
+    x = F.relu(F.max_pool2d(x, 2))
     x = F.conv2d(x, W2[:-1].view(16, 6, 5, 5), bias=W2[-1])
-    x = torch.tanh(F.max_pool2d(x, 2))
-    x = torch.tanh(x.view(-1, 16 * 4 * 4).mm(W3[:-1]) + W3[-1])
-    x = torch.tanh(x.mm(W4[:-1]) + W4[-1])
+    x = F.relu(F.max_pool2d(x, 2))
+    x = F.relu(x.view(-1, 16 * 4 * 4).mm(W3[:-1]) + W3[-1])
+    x = F.relu(x.mm(W4[:-1]) + W4[-1])
     y = x.mm(W5[:-1]) + W5[-1]
     return y
 
@@ -90,7 +90,7 @@ def main():
     for batch_idx, (data, target) in enumerate(train_loader):
       step_start = time.perf_counter()
       
-      data, target = data.to(device), target.to(device)
+      #      data, target = data.to(device), target.to(device)
       
       loss = train_loss(data, target)
 
