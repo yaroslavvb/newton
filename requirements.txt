@@ -1,0 +1,9 @@
+pillow
+numpy
+tensorflow
+torch
+torchvision
+networkx
+scipy
+ncluster
+tensorboardX
