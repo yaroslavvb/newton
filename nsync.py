@@ -9,6 +9,7 @@ import os
 import select
 import subprocess
 import sys
+import time
 
 from ncluster import aws_util as u
 
@@ -128,7 +129,12 @@ def main():
   # obtain ssh
   resyncd = Resyncd('asdf', sync)
 
-  resyncd.run()
+  try:
+    resyncd.run()
+  except Exception as e:
+    print("Exception", e, "Retrying in 60")
+    time.sleep(30)
+    
   return 0
 
 
