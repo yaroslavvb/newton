@@ -1,1 +1,1 @@
-# newton
+# Experiments wiht newton-like methods
