@@ -14,6 +14,8 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
+parser.add_argument('--run', type=str, default='psgd-lenet',
+                    help='name of run')
 args = parser.parse_args()
 
 
@@ -24,8 +26,7 @@ def main():
   print("using device ", device)
   torch.manual_seed(args.seed)
 
-
-  logger = u.TensorboardLogger("psgd-lenet")
+  logger = u.TensorboardLogger(args.run)
   batch_size = 64
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
   train_loader = torch.utils.data.DataLoader(
@@ -82,14 +83,15 @@ def main():
     return num_errs.item() / len(test_loader.dataset)
 
   Qs = [[torch.eye(W.shape[0]), torch.eye(W.shape[1])] for W in Ws]
-  step_size = 0.1
+  step_size = 0.1  # tried 0.15, diverges
   grad_norm_clip_thr = 1e10
   TrainLoss, TestLoss = [], []
   example_count = 0
+  step_time_ms = 0
+  
   for epoch in range(10):
     for batch_idx, (data, target) in enumerate(train_loader):
       step_start = time.perf_counter()
-      
       #      data, target = data.to(device), target.to(device)
       
       loss = train_loss(data, target)
@@ -99,7 +101,7 @@ def main():
       logger.set_step(example_count)
       logger('loss/train', TrainLoss[-1])
       if batch_idx % 10 == 0:
-        print('Epoch: {}; batch: {}; train loss: {}'.format(epoch, batch_idx, TrainLoss[-1]))
+        print(f'Epoch: {epoch}; batch: {batch_idx}; train loss: {TrainLoss[-1]:.2f}, step time: {step_time_ms:.0f}')
 
       v = [torch.randn(W.shape) for W in Ws]
       Hv = grad(grads, Ws, v)  # let Hv=grads if using whitened gradients
@@ -119,7 +121,8 @@ def main():
         logger('grad_norm', grad_norm)
 
       example_count += batch_size
-      logger('time/step', 1000*(time.perf_counter() - step_start))
+      step_time_ms = 1000*(time.perf_counter() - step_start)
+      logger('time/step', step_time_ms)
 
     test_loss0 = test_loss()
     TestLoss.append(test_loss0)
@@ -130,3 +133,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+        

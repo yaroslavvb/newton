@@ -78,6 +78,8 @@ def main():
                       help='random seed (default: 1)')
   parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                       help='how many batches to wait before logging training status')
+  parser.add_argument('--run', type=str, default='momentum-lenet',
+                      help='name of run')
   args = parser.parse_args()
   use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -101,7 +103,7 @@ def main():
     ])),
     batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-  logger = u.TensorboardLogger("psgd-momentum")
+  logger = u.TensorboardLogger(args.run)
 
   model = LeNet().to(device)
   optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)

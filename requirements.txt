@@ -7,4 +7,10 @@ networkx
 scipy
 ncluster
 tensorboardX
+pillow
+matplotlib
+
+# conda config --add channels conda-forge 
+# conda update pip
+# conda install -c conda-forge matplotlib
 
