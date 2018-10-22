@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Sync utility, forked from original by gdb@openai
-# Syncs current directory with NFS newton
+# Syncs current directory with /ncluster/newton
 
 import argparse
 import fcntl

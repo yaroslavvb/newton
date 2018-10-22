@@ -10,6 +10,8 @@ tensorboardX
 pillow
 matplotlib
 
+# sudo apt install htop nload
+
 # conda config --add channels conda-forge 
 # conda update pip
 # conda install -c conda-forge matplotlib
