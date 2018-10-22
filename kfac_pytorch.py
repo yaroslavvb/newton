@@ -16,9 +16,14 @@ fs = [dsize, 28*28, 1024, 1024, 1024, 196, 1024, 1024, 1024, 28*28]
 n = len(fs) - 2   # number of matmuls
 covA_saved = [None]*n
 covB_saved = [None]*n
+A_saved =  [None]*n
+Bhat_saved =  [None]*n
+BB_saved =  [None]*n
 
-def regularized_inverse(mat, lambda_=3e-3, inverse_method='numpy',
+def regularized_inverse(mat, lambda_=1e-3, inverse_method='numpy',
                         use_cuda=True):
+#def regularized_inverse(mat, lambda_=3e-3, inverse_method='numpy',
+#                        use_cuda=True):
   assert mat.shape[0] == mat.shape[1]
   ii = torch.eye(mat.shape[0])
   if use_cuda:
@@ -42,6 +47,8 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
           lr=0.2, newton_matrix='stochastic', eval_every_n_steps=1,
           print_interval=200, inverse_method='numpy'):
   """Train on first 10k MNIST examples, evaluate on second 10k."""
+
+  global BB_saved
   
   u.reset_time()
   dsize = 10000
@@ -88,10 +95,14 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
         As.insert(0, matrix2.data)
       elif mode == 'kfac':
         B = grad_output.data
+        BB_saved.append(B.detach().cpu())
         A = matrix2.data
-        kfac_A = As_inv.pop() @ A
-        kfac_B = Bs_inv.pop() @ B
+        Ainv = As_inv.pop()
+        Binv = Bs_inv.pop()
+        kfac_A = Ainv @ A
+        kfac_B = Binv @ B
         grad_matrix1 = Variable(torch.mm(kfac_B, kfac_A.t()))
+        #        print(Ainv[0,0].cpu().numpy(), Binv[0,0].cpu().numpy(), grad_matrix1[0,0].cpu().numpy())
       elif mode == 'standard':
         grad_matrix1 = torch.mm(grad_output, matrix2.t())
 
@@ -155,6 +166,7 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
     assert False, 'unknown optimizer '+optimizer
 
   noise = torch.Tensor(*train_data.data.shape).type(torch_dtype)
+
   assert fs[-1]<=dsize
   padding = dsize-fs[-1]
   zero_mat = torch.zeros((fs[-1], padding))
@@ -167,6 +179,9 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
   for step in range(iters):
     mode = 'standard'
     output = model(train_data)
+
+    if step>0:
+      optimizer.step()
 
     if kfac:
       mode = 'capture'
@@ -183,7 +198,6 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
 
       output_hat = Variable(output.data+err_add)
       err_hat = output_hat - output
-        
       loss_hat = torch.sum(err_hat*err_hat)/2/dsize
       loss_hat.backward(retain_graph=True)
 
@@ -193,14 +207,19 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
         if i == 0 and covA_inv_saved[i] is not None:
           covA_inv = covA_inv_saved[i]
         else:
-          covA_inv = regularized_inverse(As[i] @ As[i].t()/dsize,
+          covA = As[i] @ As[i].t()/dsize
+          covA_inv = regularized_inverse(covA,
                                          inverse_method=inverse_method)
           covA_inv_saved[i] = covA_inv
         As_inv.append(covA_inv)
 
-        covB = (Bs[i]@Bs[i].t())*dsize
+        covA = As[i] @ As[i].t()/dsize
+        covB = (Bs[i] @ Bs[i].t())*dsize
+        covA_saved[i] = covA
         covB_saved[i] = covB
-        covA_saved[i] = As[i] @ As[i].t()/dsize
+        
+        A_saved[i] = As[i]
+        Bhat_saved[i] = Bs[i]
         
         # alternative formula: slower but numerically better result
         # covB = (Bs[i]*dsize)@(Bs[i].t()*dsize)/dsize
@@ -208,6 +227,7 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
         covB_inv = regularized_inverse(covB, inverse_method=inverse_method)
         Bs_inv.append(covB_inv)
       mode = 'kfac'
+      BB_saved = []
       
     else:
       mode = 'standard'
@@ -226,7 +246,6 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
     err = output - train_data
     loss = torch.sum(err*err)/2/dsize
     loss.backward()
-    optimizer.step()
     
     loss0 = loss.data.cpu().numpy()
     losses.append(loss0)
@@ -236,7 +255,7 @@ def train(optimizer='sgd', nonlin=torch.sigmoid, kfac=True, iters=10,
       
     u.record_time()
 
-  return losses, vlosses, model
+  return losses, vlosses, model, optimizer
 
 
 def main():
