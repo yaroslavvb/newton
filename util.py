@@ -905,9 +905,6 @@ class timeit:
     logger = u.get_last_logger(skip_existence_check=True)
     if logger:
       newtag = 'time/' + self.tag
-      # since tensorboard doesn't allow hierarchical tags, merge init times
-      if newtag.startswith('time/init'):
-        newtag = newtag.replace('time/init', 'timeinit')
       logger(newtag, interval_ms)
 
 
@@ -1400,10 +1397,13 @@ class TensorboardLogger:
     self.step = step
     global_last_logger = self
     self.last_timestamp = time.perf_counter()
+    self.d = {}   # dictionary with copy of all events
+    
     #    self('first', time.time())  # for benchmarking purposes
 
   def log(self, tag, value):
     self.writer.add_scalar(tag=tag, scalar_value=float(value), global_step=self.step)
+    self.d.setdefault(tag, []).append(value)
 
   def __call__(self, *args):
     """Helper method to log multiple events at once, logger('tag1', val1, 'tag2', val2)"""

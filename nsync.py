@@ -50,6 +50,10 @@ class Resyncd(object):
       files = output.strip().split("\n")
       # Ignore emacs swap files
       files = [f for f in files if '#' not in os.path.basename(f)]
+
+      # ignore Tensorboard local runs directory
+      files = [f for f in files if 'tfevents' not in os.path.basename(f)]
+      
       if files:
         print("changed: " + str(files))
       files = set(files)  # remove duplicates from fswatch_output
