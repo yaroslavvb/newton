@@ -103,6 +103,35 @@ def update_precond_kron(Ql, Qr, dX, dG, step=0.01):
     return Ql - step1*grad1.mm(Ql), Qr - step2*grad2.mm(Qr)
     
 
+def update_precond_kron_with_step(Ql, Qr, dX, dG, step=0.01):
+    """
+    update Kronecker product preconditioner P = kron_prod(Qr^T*Qr, Ql^T*Ql)
+    Ql: (left side) Cholesky factor of preconditioner with positive diagonal entries
+    Qr: (right side) Cholesky factor of preconditioner with positive diagonal entries
+    dX: perturbation of (matrix) parameter
+    dG: perturbation of (matrix) gradient
+    step: normalized step size in range [0, 1] 
+    """
+    max_l = torch.max(torch.abs(Ql))
+    max_r = torch.max(torch.abs(Qr))
+    
+    rho = torch.sqrt(max_l/max_r)
+    Ql = Ql/rho
+    Qr = rho*Qr
+    
+    A = Ql.mm( dG.mm( Qr.t() ) )
+    Bt = torch.trtrs((torch.trtrs(dX.t(), Qr.t(), upper=False))[0].t(), 
+                     Ql.t(), upper=False)[0]
+    
+    grad1 = torch.triu(A.mm(A.t()) - Bt.mm(Bt.t()))
+    grad2 = torch.triu(A.t().mm(A) - Bt.t().mm(Bt))
+    
+    step1 = step/(torch.max(torch.abs(grad1)) + _tiny)
+    step2 = step/(torch.max(torch.abs(grad2)) + _tiny)
+        
+    return Ql - step1*grad1.mm(Ql), Qr - step2*grad2.mm(Qr), ((step1+step2)/2).item()
+    
+
 def precond_grad_kron(Ql, Qr, Grad):
     """
     return preconditioned gradient using Kronecker product preconditioner

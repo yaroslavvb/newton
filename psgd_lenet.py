@@ -24,6 +24,7 @@ parser.add_argument('--test', action='store_true',
                     help='simple numeric test')
 args = parser.parse_args()
 
+num_updates = 4
 
 class LeNet(nn.Module):
   def __init__(self):
@@ -155,9 +156,21 @@ def main():
         # v = grads
         Hv = autograd.grad(grads, net.W, v)
 
+      n = len(net.W)
       with torch.no_grad():
         with u.timeit('P_update'):
-          Qs = [psgd.update_precond_kron(q[0], q[1], dw, dg) for (q, dw, dg) in zip(Qs, v, Hv)]
+          for i in range(num_updates):
+            psteps = []
+            for j in range(n):
+              q = Qs[j]
+              dw = v[j]
+              dg = Hv[j]
+              Qs[j][0], Qs[j][1], pstep = psgd.update_precond_kron_with_step(q[0], q[1], dw, dg)
+              psteps.append(pstep)
+
+          print(np.array(psteps).mean())
+          logger('p_residual', np.array(psteps).mean())
+          
         with u.timeit('g_update'):
           pre_grads = [psgd.precond_grad_kron(q[0], q[1], g) for (q, g) in zip(Qs, grads)]
           grad_norm = torch.sqrt(sum([torch.sum(g * g) for g in pre_grads]))
