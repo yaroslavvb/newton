@@ -24,7 +24,7 @@ parser.add_argument('--test', action='store_true',
                     help='simple numeric test')
 args = parser.parse_args()
 
-num_updates = 4
+num_updates = 1
 
 class LeNet(nn.Module):
   def __init__(self):
@@ -168,7 +168,7 @@ def main():
               Qs[j][0], Qs[j][1], pstep = psgd.update_precond_kron_with_step(q[0], q[1], dw, dg)
               psteps.append(pstep)
 
-          print(np.array(psteps).mean())
+              #          print(np.array(psteps).mean())
           logger('p_residual', np.array(psteps).mean())
           
         with u.timeit('g_update'):
