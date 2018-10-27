@@ -133,11 +133,12 @@ def main():
   # obtain ssh
   resyncd = Resyncd('asdf', sync)
 
-  try:
-    resyncd.run()
-  except Exception as e:
-    print("Exception", e, "Retrying in 60")
-    time.sleep(30)
+  while True:
+    try:
+      resyncd.run()
+    except Exception as e:
+      print("Exception", e, "Retrying in 60")
+      time.sleep(30)
     
   return 0
 
