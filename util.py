@@ -1349,9 +1349,13 @@ def setup_experiment_run_directory(run, safe_mode=True):
 
 # TODO: have global experiment_base that I can use to move logging to
 # non-current directory
-GLOBAL_RUNS_DIRECTORY = 'runs'
+GLOBAL_RUNS_DIRECTORY = 'runs3'
 global_last_logger = None
 
+def set_runs_directory(d):
+  global GLOBAL_RUNS_DIRECTORY
+  print(f"setting global runs to {d}")
+  GLOBAL_RUNS_DIRECTORY = d
 
 def get_last_logger(skip_existence_check=False):
   """Returns last logger, if skip_existence_check is set, doesn't
@@ -1373,11 +1377,11 @@ class TensorboardLogger:
   def __init__(self, run_name, step=0):
     """Creates runs/run_name, deduping to runs/run_name.01, runs/run_name.02, etc"""
 
-    global global_last_logger
+    global global_last_logger, GLOBAL_RUNS_DIRECTORY
     assert global_last_logger is None
     self.run_name = run_name
 
-    logdir_root = 'runs'
+    logdir_root = GLOBAL_RUNS_DIRECTORY
     ossystem(f'mkdir -p {logdir_root}')
     find_command = f'find {logdir_root} -maxdepth 1 -type d'
     stdout = ossystem(find_command)

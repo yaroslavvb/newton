@@ -1,3 +1,8 @@
+"""
+Epoch: 0; batch: 930; train loss: 0.11, step time: 15
+Epoch: 0; best test loss: 0.0223
+"""
+
 import time
 
 import torch
@@ -5,6 +10,7 @@ import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import sys
 
 from torchvision import datasets, transforms
 import preconditioned_stochastic_gradient_descent as psgd
@@ -22,9 +28,14 @@ parser.add_argument('--run', type=str, default='psgd-lenet',
                     help='name of run')
 parser.add_argument('--test', action='store_true',
                     help='simple numeric test')
+parser.add_argument('--early-stop', action='store_true',
+                    help='stop after 1 iteration')
+parser.add_argument('--verbose', action='store_true',
+                    help='print everything')
 args = parser.parse_args()
 
 num_updates = 1
+
 
 class LeNet(nn.Module):
   def __init__(self):
@@ -84,18 +95,20 @@ def main():
   print("using device ", device)
   torch.manual_seed(args.seed)
 
+  u.set_runs_directory('runs3')
   logger = u.TensorboardLogger(args.run)
   batch_size = 64
+  shuffle = True
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
   train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('/tmp/data', train=True, download=True,
                    transform=transforms.Compose([
                      transforms.ToTensor()])),
-    batch_size=batch_size, shuffle=True, **kwargs)
+    batch_size=batch_size, shuffle=shuffle, **kwargs)
   test_loader = torch.utils.data.DataLoader(
     datasets.MNIST('/tmp/data', train=False, transform=transforms.Compose([
       transforms.ToTensor()])),
-    batch_size=1000, shuffle=True, **kwargs)
+    batch_size=1000, shuffle=shuffle, **kwargs)
 
   """input image size for the original LeNet5 is 32x32, here is 28x28"""
 
@@ -152,9 +165,15 @@ def main():
 
       with u.timeit('Hv'):
         #        noise.normal_()
+        # torch.manual_seed(args.seed)
         v = [torch.randn(w.shape).to(device) for w in net.W]
         # v = grads
         Hv = autograd.grad(grads, net.W, v)
+
+      if args.verbose:
+        print("v", v[0].mean())
+        print("data", data.mean())
+        print("Hv", Hv[0].mean())
 
       n = len(net.W)
       with torch.no_grad():
@@ -170,7 +189,7 @@ def main():
 
               #          print(np.array(psteps).mean())
           logger('p_residual', np.array(psteps).mean())
-          
+
         with u.timeit('g_update'):
           pre_grads = [psgd.precond_grad_kron(q[0], q[1], g) for (q, g) in zip(Qs, grads)]
           grad_norm = torch.sqrt(sum([torch.sum(g * g) for g in pre_grads]))
@@ -185,6 +204,13 @@ def main():
         logger('step/size', step_size)
         logger('step/total', total_step)
         logger('grad_norm', grad_norm)
+
+        if args.verbose:
+          print(data.mean())
+          import pdb;
+          pdb.set_trace()
+        if args.early_stop:
+          sys.exit()
 
       example_count += batch_size
       step_time_ms = 1000 * (time.perf_counter() - step_start)
