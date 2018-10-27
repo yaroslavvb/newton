@@ -5,7 +5,6 @@ import inspect
 import inspect
 import subprocess
 
-import networkx as nx
 import numpy as np
 import os
 import sys
@@ -1419,10 +1418,9 @@ class TensorboardLogger:
     #   File "/home/ubuntu/anaconda3/envs/tensorflow_p36/lib/python3.6/site-packages/tensorboardX/writer.py", line 376, in export_scalars_to_json
     # NameError: name 'open' is not defined
     # self.writer.export_scalars_to_json(self.output_dir+'/scalars.json')
-    self.writer.close()
+    if self.writer:
+      self.writer.close()
 
-  def __del__(self):
-    self.close()
 
 
 def as_int32(v):
